@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國立嘉義大學營繕組實聯制登記</title>
+    <script type='text/javascript' src='quagga.min.js'></script>
+
+</head>
+
+<body>
+    <div id="canvanCode"></div>
+    <div id="completeContent"></div>
+    <div id="reload" style="display: none;">
+        <button onClick='window.location.reload()'>重新掃描</button>
+    </div>
+
+
+    <script>
+        function postData(id) {
+            var myHeaders = new Headers();
+            myHeaders.append("Content-Type", "application/x-www-form-urlencoded");
+            var urlencoded = new URLSearchParams();
+            urlencoded.append("id", id);
+            urlencoded.append("time", new Date());
+            var requestOptions = {
+                method: 'POST',
+                headers: myHeaders,
+                body: urlencoded,
+                redirect: 'follow'
+            };
+            fetch("https://script.google.com/macros/s/AKfycby4Zrz2vEfLKmKrDbHCfCPPUKEmUmkOUD5FINdnbmxHIZbn8oN2E9ulENx2WWmuXJ9b/exec",
+                    requestOptions)
+                .then(response => response.text())
+                .then(result => console.log(result))
+                .catch(error => console.log('error', error));
+        }
+
+        function verifyId(id) {
+            id = id.trim();
+            verification = id.match("^[A-Z][12]\\d{8}$")
+            if (!verification) {
+                return false
+            }
+            let conver = "ABCDEFGHJKLMNPQRSTUVXYWZIO"
+            let weights = [1, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1]
+            id = String(conver.indexOf(id[0]) + 10) + id.slice(1);
+            checkSum = 0
+            for (let i = 0; i < id.length; i++) {
+                c = parseInt(id[i])
+                w = weights[i]
+                checkSum += c * w
+            }
+            return checkSum % 10 == 0
+        }
+
+        var track;
+        var code_old_number = 0;
+        var code_old_name;
+        Quagga.init({
+            inputStream: {
+                name: "Live",
+                type: "LiveStream",
+                target: document.querySelector('#canvanCode') // Or '#yourElement' (optional)
+            },
+            decoder: {
+                //readers : ["ean_reader"],
+                readers: ['code_128_reader'],
+                debug: {
+                    drawBoundingBox: true,
+                    showFrequency: true,
+                    drawScanline: true,
+                    showPattern: true
+                },
+                multiple: false
+            }
+        }, function (err) {
+            if (err) {
+                console.log(err);
+                return
+            }
+            console.log("Initialization finished. Ready to start");
+            Quagga.start();
+
+            Quagga.onDetected(function (data) {
+                //console.log(verifyId(data.codeResult.code)?data.codeResult.code:'錯誤')
+                if (verifyId(data.codeResult.code)) {
+                    //console.log(data.codeResult.code);
+                    postData(data.codeResult.code)
+                    document.querySelector('#canvanCode').innerHTML = ''
+                    document.getElementById('completeContent').innerHTML =
+                        '<h1>您好 已完成登記，本資料僅於疫調追蹤不會作為其他用途，最多保存28天後將刪除銷毀，謝謝您的合作<h1>'
+                    document.getElementById('reload').style.display = 'block';
+                    Quagga.stop();
+                } else {
+                    console.log('錯誤')
+                }
+
+                //console.log(data.codeResult.code);
+                // document.getElementById('key_isbn_number').value=data.codeResult.code;
+            })
+
+            var track = Quagga.CameraAccess.getActiveTrack();
+            track.applyConstraints({
+                advanced: [{
+                    zoom: 3.0
+                }]
+            });
+
+
+        });
+    </script>
+</body>
+
+</html>
