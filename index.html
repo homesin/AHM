@@ -6,8 +6,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>國立嘉義大學營繕組實聯制登記</title>
-    <script type='text/javascript' src='quagga.min.js'></script>
-
+    <script type='text/javascript' src="./javascripts/adapter-latest.js"></script>
+    <script type='text/javascript' src='./javascripts/quagga.min.js'></script>
+    <link rel="stylesheet" href="./javascripts/example.css">
 </head>
 
 <body>
@@ -84,32 +85,74 @@
             console.log("Initialization finished. Ready to start");
             Quagga.start();
 
-            Quagga.onDetected(function (data) {
-                //console.log(verifyId(data.codeResult.code)?data.codeResult.code:'錯誤')
-                if (verifyId(data.codeResult.code)) {
-                    //console.log(data.codeResult.code);
-                    postData(data.codeResult.code)
-                    document.querySelector('#canvanCode').innerHTML = ''
-                    document.getElementById('completeContent').innerHTML =
-                        '<h1>您好 已完成登記，本資料僅於疫調追蹤不會作為其他用途，最多保存28天後將刪除銷毀，謝謝您的合作<h1>'
-                    document.getElementById('reload').style.display = 'block';
-                    Quagga.stop();
-                } else {
-                    console.log('錯誤')
+        });
+        Quagga.onProcessed(function (result) {
+
+            var drawingCtx = Quagga.canvas.ctx.overlay,
+                drawingCanvas = Quagga.canvas.dom.overlay;
+
+            if (result) {
+                if (result.boxes) {
+                    //console.log(result.boxes);
+                    drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")),
+                        parseInt(drawingCanvas.getAttribute("height")));
+                    result.boxes.filter(function (box) {
+                        return box !== result.box;
+                    }).forEach(function (box) {
+                        Quagga.ImageDebug.drawPath(box, {
+                            x: 0,
+                            y: 1
+                        }, drawingCtx, {
+                            color: "green",
+                            lineWidth: 2
+                        });
+                    });
                 }
 
+                if (result.box) {
+                    Quagga.ImageDebug.drawPath(result.box, {
+                        x: 0,
+                        y: 1
+                    }, drawingCtx, {
+                        color: "#00F",
+                        lineWidth: 2
+                    });
+                }
+
+                if (result.codeResult && result.codeResult.code) {
+                    Quagga.ImageDebug.drawPath(result.line, {
+                        x: 'x',
+                        y: 'y'
+                    }, drawingCtx, {
+                        color: 'red',
+                        lineWidth: 3
+                    });
+                }
+            }
+        });
+        Quagga.onDetected(function (data) {
+            //console.log(verifyId(data.codeResult.code)?data.codeResult.code:'錯誤')
+            if (verifyId(data.codeResult.code)) {
                 //console.log(data.codeResult.code);
-                // document.getElementById('key_isbn_number').value=data.codeResult.code;
-            })
+                postData(data.codeResult.code)
+                document.querySelector('#canvanCode').innerHTML = ''
+                document.getElementById('completeContent').innerHTML =
+                    '<h1>您好 已完成登記，本資料僅於疫調追蹤不會作為其他用途，最多保存28天後將刪除銷毀，謝謝您的合作<h1>'
+                document.getElementById('reload').style.display = 'block';
+                Quagga.stop();
+            } else {
+                console.log('錯誤')
+            }
 
-            var track = Quagga.CameraAccess.getActiveTrack();
-            track.applyConstraints({
-                advanced: [{
-                    zoom: 3.0
-                }]
-            });
+            //console.log(data.codeResult.code);
+            // document.getElementById('key_isbn_number').value=data.codeResult.code;
+        })
 
-
+        var track = Quagga.CameraAccess.getActiveTrack();
+        track.applyConstraints({
+            advanced: [{
+                zoom: 3.0
+            }]
         });
     </script>
 </body>
